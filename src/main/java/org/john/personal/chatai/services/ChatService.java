@@ -1,10 +1,13 @@
 package org.john.personal.chatai.services;
 
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.memory.MessageWindowChatMemory;
+import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.actuate.autoconfigure.endpoint.expose.IncludeExcludeEndpointFilter;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -18,10 +21,16 @@ public class ChatService {
 
     // in-memory conversation for context storage
     private final Map<String, List<String>> conversations = new HashMap<String, List<String>>();
+    private MessageWindowChatMemory messageWindowChatMemory;
 
-    public ChatService(OllamaChatModel ollamaChatModel) {
-        this.chatClient = ChatClient.builder(ollamaChatModel).build();
+    public ChatService(OllamaChatModel ollamaChatModel, MessageWindowChatMemory getChatMemory) {
+        this.messageWindowChatMemory = getChatMemory;
+        this.chatClient = ChatClient
+                .builder(ollamaChatModel)
+                .defaultAdvisors(MessageChatMemoryAdvisor.builder(getChatMemory).build())
+                .build();
     }
+
 
     /*
     * Chat with context
@@ -61,6 +70,12 @@ public class ChatService {
         return aiResponse;
     }
 
+    public String chatWithContextMessageMemory(String userMessage, String conversationId){
+        return chatClient.prompt(getSimpleChatContextPrompt())
+                .user(userMessage)
+                .advisors(memory -> memory.param(ChatMemory.CONVERSATION_ID, conversationId))
+                .call().content();
+    }
     private String buildContextString(List<String> conversation) {
         System.out.println("=== Building Context String ===");
         if(conversation.isEmpty()){
@@ -97,8 +112,8 @@ public class ChatService {
         return new HashMap<>(conversations);
     }
 
-    public List<String> getConversationById(String conversationId) {
-        return conversations.get(conversationId);
+    public List<Message> getConversationById(String conversationId) {
+        return messageWindowChatMemory.get(conversationId);
     }
 
 }

@@ -33,7 +33,7 @@ public class ChatController {
         }
         System.out.println("\n Starting chat request...");
 
-        String response = chatService.chatWithContext(message, conversationId);
+        String response = chatService.chatWithContextMessageMemory(message, conversationId);
 
         return ResponseEntity.ok(Map.of(
                 "userMessage", message,
