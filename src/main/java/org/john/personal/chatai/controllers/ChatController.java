@@ -1,44 +1,44 @@
 package org.john.personal.chatai.controllers;
 
+import org.john.personal.chatai.services.ChatService;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.openai.OpenAiChatModel;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Date;
 import java.util.Map;
-
+@RequestMapping("/api/chat")
 @RestController
 public class ChatController {
 
-    private final OpenAiChatModel openAiChatModel;
-    private final OllamaChatModel ollamaChatModel;
+    private final ChatService chatService;
 
-    public ChatController(OpenAiChatModel openAiChatModel, OllamaChatModel ollamaChatModel) {
-        this.openAiChatModel = openAiChatModel;
-        this.ollamaChatModel = ollamaChatModel;
+    public ChatController(final ChatService chatService) {
+        this.chatService = chatService;
     }
 
-    @PostMapping("/chat/ollama")
-    public Map<String, Object> ollamaChat(@RequestBody Map<String, String> request) {
-        String userInput = request.get("message");
+    /*
+    * Chat with context
+    * POST /api/simple
+    * */
+    @PostMapping("/simple")
+    public ResponseEntity<Map<String, Object>> chat(@RequestBody Map<String, String> request){
+        String message = request.get("message");
+        String conversationId = request.get("conversationId");
 
-        ChatClient client = ChatClient.builder(ollamaChatModel).build();
-        String response = client
-                .prompt()
-                .user(userInput)
-                .call()
-                .content();
-        return Map.of("provider", "ollama", "answer", response);
-    }
-    @PostMapping("/chat/openai/")
-    public Map<String, Object> openAIChat(@RequestBody Map<String, String> request) {
-        String userInput = request.get("message");
-        ChatClient client = ChatClient.builder(openAiChatModel).build();
-        String response = client
-                .prompt()
-                .user(userInput)
-                .call()
-                .content();
-        return Map.of("provider", "openai", "answer", response);
+        if(conversationId == null || conversationId.isEmpty()){
+            conversationId = "default-conversation";
+        }
+        System.out.println("\n Starting chat request...");
+
+        String response = chatService.chatWithContext(message, conversationId);
+
+        return ResponseEntity.ok(Map.of(
+                "userMessage", message,
+                "aiResponse", response,
+                "conversationId", conversationId,
+                "timeStamp", new Date().toString()));
     }
 }
