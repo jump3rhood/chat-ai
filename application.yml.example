@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: chat-ai
+  profiles:
+    active: ollama
+
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:your-api-key}
+      chat:
+        options:
+          model: gpt-3.5-turbo
+          temperature: 0.7
+          max-tokens: 500
+      base-url:  https://api.openai.com/
+
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        options:
+          model: llama3.2
+          temperature: 0.7
+          num-predict: 500
+
+server:
+  port: 8091
