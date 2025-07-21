@@ -7,7 +7,6 @@ import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.ollama.OllamaChatModel;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -19,11 +18,17 @@ import java.util.Map;
 public class ChatService {
     private final ChatClient chatClient;
 
-    // in-memory conversation for context storage
+    // in-memory conversation for manual context storage
     private final Map<String, List<String>> conversations = new HashMap<String, List<String>>();
-    private MessageWindowChatMemory messageWindowChatMemory;
+    private final MessageWindowChatMemory messageWindowChatMemory;
+
+    /*
+    * spring autoconfigures the OllamaChatModel from properties.
+    * For adding chat history to our chatClient, we need to add a ChatMemory impl (MessageWindowChatMemory)
+    * */
 
     public ChatService(OllamaChatModel ollamaChatModel, MessageWindowChatMemory getChatMemory) {
+        // get bean for ChatMemory to get the conversation-history by the conversation Id
         this.messageWindowChatMemory = getChatMemory;
         this.chatClient = ChatClient
                 .builder(ollamaChatModel)
@@ -35,7 +40,7 @@ public class ChatService {
     /*
     * Chat with context
     * */
-    public String chatWithContext(String userMessage, String conversationId){
+    public String chatWithManualContext(String userMessage, String conversationId){
 
         System.out.println("===Simple Context Chat ===");
         System.out.println("User message: " + userMessage);
@@ -95,16 +100,14 @@ public class ChatService {
         System.out.println("Final context string length: " + context.length());
         return context.toString();
     }
+
     public Prompt getSimpleChatContextPrompt(){
         return new Prompt("""
                 You are a helpful AI chatbot that is interacting with a user.
-                The text you received contains the previous history of the conversation so far. 
-                The "User:" is what the user had asked before and "AI Response:" is what you(the LLM) has
-                 replied to the text.
+                The text you received contains the previous history of the conversation so far.
                 Use this information to recall things from the conversation, or in other words if you need any 
                 information from past responses and respond directly to the last message.
-                If you do not need the previous information, simply respond with your built-in knowledge. Be very 
-                polite and answer the asked questions without deviation. Keep the responses brief without 
+                If you do not need the previous information, simply respond with your built-in knowledge.Keep the responses brief without 
                 explicitly mentioning what the conversation before was and respond to the answer.
                 """);
     }
